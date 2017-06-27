@@ -2,5 +2,9 @@
 name = "persistent-vector"
 version = "0.1.0"
 authors = ["Marcus Medom Ryding <mrok4a@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Magnap/persistent-vector-rs"
+readme = "README.md"
+categories = ["data-structures"]
 
 [dependencies]
