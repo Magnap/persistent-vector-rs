@@ -8,3 +8,7 @@ readme = "README.md"
 categories = ["data-structures"]
 
 [dependencies]
+
+[features]
+default = []
+narrow_branching = []
