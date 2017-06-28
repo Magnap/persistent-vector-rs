@@ -3,13 +3,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn print_pushes() {
+    fn push_get() {
         let mut v = PVec::new();
-        println!("{:?}", v);
         for i in 0..(BRANCH_FACTOR * 4 + 1) {
             v = v.push(i);
-            println!("{:#?}", v)
         }
+        println!("{:#?}", v);
+        for i in 0..(BRANCH_FACTOR * 4 + 1) {
+            println!("{}:", i);
+            assert_eq!(v.get(i), Some(&i));
+        }
+        assert_eq!(v.get(BRANCH_FACTOR * 4 + 1), None);
     }
 }
 
@@ -17,10 +21,13 @@ use std::sync::Arc;
 use std::mem;
 
 #[cfg(feature = "narrow_branching")]
-//const BRANCH_EXPONENT: usize = 2;
+const BRANCH_EXPONENT: usize = 2;
+#[cfg(feature = "narrow_branching")]
 const BRANCH_FACTOR: usize = 4; // 2^BRANCH_EXPONENT
+
 #[cfg(not(feature = "narrow_branching"))]
-//const BRANCH_EXPONENT: usize = 5;
+const BRANCH_EXPONENT: usize = 5;
+#[cfg(not(feature = "narrow_branching"))]
 const BRANCH_FACTOR: usize = 32; // 2^BRANCH_EXPONENT
 
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
@@ -31,7 +38,10 @@ pub struct PVec<T> {
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
 enum Node<T> {
-    Branch { children: [Option<Arc<PVec<T>>>; BRANCH_FACTOR], },
+    Branch {
+        children: [Option<Arc<PVec<T>>>; BRANCH_FACTOR],
+        depth: usize,
+    },
     Leaf { elements: [Option<T>; BRANCH_FACTOR], },
 }
 
@@ -66,12 +76,18 @@ impl<T> Default for Node<T> {
 impl<T: Clone> Clone for Node<T> {
     fn clone(&self) -> Self {
         match *self {
-            Node::Branch { ref children } => {
+            Node::Branch {
+                ref children,
+                ref depth,
+            } => {
                 let mut kids = empty_arr!();
                 for i in 0..children.len() {
                     kids[i] = children[i].clone()
                 }
-                Node::Branch { children: kids }
+                Node::Branch {
+                    children: kids,
+                    depth: *depth,
+                }
             }
             Node::Leaf { ref elements } => {
                 let mut elems = empty_arr!();
@@ -102,7 +118,7 @@ impl<T: Clone + Debug> PVec<T> {
                     elements[new.len] = Some(element);
                     new.len += 1;
                 }
-                Node::Branch { ref mut children } => {
+                Node::Branch { ref mut children, .. } => {
                     let i = self.len;
                     let old = mem::replace(&mut children[i], None);
                     match old {
@@ -123,11 +139,34 @@ impl<T: Clone + Debug> PVec<T> {
             new
         } else {
             let mut children = empty_arr!();
+            let depth = match self.root {
+                Node::Branch { ref depth, .. } => *depth,
+                Node::Leaf { .. } => 0,
+            };
             children[0] = Some(Arc::new(self));
             children[1] = Some(Arc::new(PVec::new().push(element)));
             PVec {
-                root: Node::Branch { children: children },
+                root: Node::Branch {
+                    children: children,
+                    depth: depth + 1,
+                },
                 len: 1,
+            }
+        }
+    }
+
+    pub fn get(&self, index: usize) -> Option<&T> {
+        match self.root {
+            Node::Branch {
+                ref children,
+                ref depth,
+            } => {
+                let i = (index >> (BRANCH_EXPONENT * depth)) & (BRANCH_FACTOR - 1);
+                children[i].as_ref().and_then(|c| c.get(index))
+            }
+            Node::Leaf { ref elements } => {
+                let i = index & (BRANCH_FACTOR - 1);
+                elements[i].as_ref()
             }
         }
     }
