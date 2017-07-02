@@ -4,7 +4,7 @@ mod tests {
 
     #[test]
     fn push_get() {
-        let n = BRANCH_FACTOR.pow(2) + 1;
+        let n = BRANCH_FACTOR.pow(3) + 1;
         let mut v = PVec::new();
         for i in 0..n {
             v = v.push(i);
