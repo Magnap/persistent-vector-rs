@@ -120,6 +120,15 @@ impl<T: Clone + Debug> PVec<T> {
         }
     }
 
+    // For elegance, this would be recursive (and there wouldn't be a depth field on `Branch`),
+    // but I'm worried about the performance of that.
+    fn depth(&self) -> u8 {
+        match self.root {
+            Node::Branch { ref depth, .. } => *depth,
+            Node::Leaf { .. } => 0,
+        }
+    }
+
     pub fn push(self, element: T) -> Self {
         if self.len < BRANCH_FACTOR {
             let mut new = self.clone();
@@ -149,10 +158,7 @@ impl<T: Clone + Debug> PVec<T> {
             new
         } else {
             let mut children = empty_arr!();
-            let depth = match self.root {
-                Node::Branch { ref depth, .. } => *depth,
-                Node::Leaf { .. } => 0,
-            };
+            let depth = self.depth();
             children[0] = Some(Arc::new(self));
             children[1] = Some(Arc::new(PVec::new().push(element)));
             PVec {
@@ -166,18 +172,10 @@ impl<T: Clone + Debug> PVec<T> {
     }
 
     pub fn get(&self, index: usize) -> Option<&T> {
+        let i = (index >> (BRANCH_EXPONENT * (self.depth() as usize))) & (BRANCH_FACTOR - 1);
         match self.root {
-            Node::Branch {
-                ref children,
-                ref depth,
-            } => {
-                let i = (index >> (BRANCH_EXPONENT * (*depth as usize))) & (BRANCH_FACTOR - 1);
-                children[i].as_ref().and_then(|c| c.get(index))
-            }
-            Node::Leaf { ref elements } => {
-                let i = index & (BRANCH_FACTOR - 1);
-                elements[i].as_ref()
-            }
+            Node::Branch { ref children, .. } => children[i].as_ref().and_then(|c| c.get(index)),
+            Node::Leaf { ref elements } => elements[i].as_ref(),
         }
     }
 }
