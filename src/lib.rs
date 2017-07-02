@@ -115,11 +115,21 @@ impl<T: Clone> Clone for Node<T> {
 use std::fmt::Debug;
 
 impl<T: Clone + Debug> PVec<T> {
+    fn new_depth(depth: u8) -> Self {
+        let node = if depth == 0 {
+            Node::default()
+        } else {
+            let mut children = empty_arr!();
+            children[0] = Some(Arc::new(Self::new_depth(depth - 1)));
+            Node::Branch {
+                children: children,
+                depth: depth,
+            }
+        };
+        PVec { root: node, len: 0 }
+    }
     pub fn new() -> Self {
-        PVec {
-            root: Node::default(),
-            len: 0,
-        }
+        Self::new_depth(0)
     }
 
     // For elegance, this would be recursive (and there wouldn't be a depth field on `Branch`),
@@ -139,7 +149,10 @@ impl<T: Clone + Debug> PVec<T> {
                     elements[new.len] = Some(element);
                     new.len += 1;
                 }
-                Node::Branch { ref mut children, .. } => {
+                Node::Branch {
+                    ref mut children,
+                    depth,
+                } => {
                     let i = self.len;
                     let old = mem::replace(&mut children[i], None);
                     match old {
@@ -151,7 +164,7 @@ impl<T: Clone + Debug> PVec<T> {
                             mem::replace(&mut children[i], Some(Arc::new(child)));
                         }
                         None => {
-                            let child = PVec::new().push(element);
+                            let child = Self::new_depth(depth - 1).push(element);
                             mem::replace(&mut children[i], Some(Arc::new(child)));
                         }
                     }
@@ -162,22 +175,30 @@ impl<T: Clone + Debug> PVec<T> {
             let mut children = empty_arr!();
             let depth = self.depth();
             children[0] = Some(Arc::new(self));
-            children[1] = Some(Arc::new(PVec::new().push(element)));
             PVec {
                 root: Node::Branch {
                     children: children,
                     depth: depth + 1,
                 },
                 len: 1,
-            }
+            }.push(element)
         }
     }
 
     pub fn get(&self, index: usize) -> Option<&T> {
-        let i = (index >> (BRANCH_EXPONENT * (self.depth() as usize))) & (BRANCH_FACTOR - 1);
-        match self.root {
-            Node::Branch { ref children, .. } => children[i].as_ref().and_then(|c| c.get(index)),
-            Node::Leaf { ref elements } => elements[i].as_ref(),
+        let factor = BRANCH_EXPONENT * self.depth() as usize;
+        let mask = BRANCH_FACTOR - 1;
+        let i = (index >> factor) & mask;
+        let index = index & !(mask << factor);
+        if index >= BRANCH_FACTOR.pow(self.depth() as u32 + 1) {
+            None
+        } else {
+            match self.root {
+                Node::Branch { ref children, .. } => {
+                    children[i].as_ref().and_then(|c| c.get(index))
+                }
+                Node::Leaf { ref elements } => elements[i].as_ref(),
+            }
         }
     }
 }
