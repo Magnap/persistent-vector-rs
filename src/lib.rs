@@ -49,7 +49,8 @@ pub struct PVec<T> {
 enum Node<T> {
     Branch {
         children: [Option<Arc<PVec<T>>>; BRANCH_FACTOR],
-        depth: usize,
+        // depth won't ever be higher than log_{BRANCH_FACTOR}(MAX: usize)
+        depth: u8,
     },
     Leaf { elements: [Option<T>; BRANCH_FACTOR], },
 }
@@ -170,7 +171,7 @@ impl<T: Clone + Debug> PVec<T> {
                 ref children,
                 ref depth,
             } => {
-                let i = (index >> (BRANCH_EXPONENT * depth)) & (BRANCH_FACTOR - 1);
+                let i = (index >> (BRANCH_EXPONENT * (*depth as usize))) & (BRANCH_FACTOR - 1);
                 children[i].as_ref().and_then(|c| c.get(index))
             }
             Node::Leaf { ref elements } => {
