@@ -27,6 +27,20 @@ mod tests {
             assert_eq!(v.get(i), None);
         }
     }
+
+    #[test]
+    fn capacity() {
+        let v = PVec::new();
+        assert_eq!(v.capacity(), BRANCH_FACTOR);
+        let v = v.push(0);
+        assert_eq!(v.capacity(), BRANCH_FACTOR);
+        let mut v = v;
+        for i in 0..BRANCH_FACTOR {
+            v = v.push(i + 1)
+        }
+        println!("{:#?}", v);
+        assert_eq!(v.capacity(), BRANCH_FACTOR * 2);
+    }
 }
 
 use std::sync::Arc;
@@ -230,6 +244,21 @@ impl<T: Clone + Debug> PVec<T> {
             full + rest
         } else {
             full
+        }
+    }
+
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        match self.root {
+            Node::Leaf { .. } => BRANCH_FACTOR,
+            Node::Branch { ref children, .. } => {
+                BRANCH_FACTOR.pow(self.depth() as u32) * self.len +
+                    if self.len < BRANCH_FACTOR {
+                        children[self.len].as_ref().map_or(0, |c| c.capacity())
+                    } else {
+                        0
+                    }
+            }
         }
     }
 }

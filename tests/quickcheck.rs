@@ -75,3 +75,24 @@ fn vec_equivalence(actions: Vec<Action<usize>>) -> TestResult {
         TestResult::passed()
     }
 }
+
+use std::fmt::Debug;
+
+fn create_pvec<T: Clone + Debug>(actions: Vec<Action<T>>) -> PVec<T> {
+    let mut pv = PVec::new();
+    for a in actions.into_iter() {
+        match a {
+            Action::Push(x) => pv = pv.push(x),
+            _ => (),
+        };
+    }
+    pv
+}
+
+#[quickcheck]
+fn wasted_capacity_bound(actions: Vec<Action<u32>>) {
+    let pv = create_pvec(actions);
+    let branch_factor = PVec::<u32>::new().capacity();
+    println!("cap: {}, len: {}", pv.capacity(), pv.len());
+    assert!(pv.capacity() - pv.len() <= branch_factor);
+}
