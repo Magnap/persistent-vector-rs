@@ -15,6 +15,15 @@ mod tests {
         }
         assert_eq!(v.get(BRANCH_FACTOR.pow(2) + 1), None);
     }
+
+    #[test]
+    fn false_get() {
+        let v = PVec::new().push(0);
+        for n in 0..BRANCH_FACTOR {
+            println!("n: {}", n);
+            assert_eq!(v.get((n + 1) * BRANCH_FACTOR), None);
+        }
+    }
 }
 
 use std::sync::Arc;
