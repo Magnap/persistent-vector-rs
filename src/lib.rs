@@ -86,6 +86,7 @@ impl<T> Default for Node<T> {
 }
 
 impl<T: Clone> Clone for Node<T> {
+    #[inline]
     fn clone(&self) -> Self {
         match *self {
             Node::Branch {
@@ -115,6 +116,7 @@ impl<T: Clone> Clone for Node<T> {
 use std::fmt::Debug;
 
 impl<T: Clone + Debug> PVec<T> {
+    #[inline]
     fn new_depth(depth: u8) -> Self {
         let node = if depth == 0 {
             Node::default()
@@ -128,12 +130,15 @@ impl<T: Clone + Debug> PVec<T> {
         };
         PVec { root: node, len: 0 }
     }
+
+    #[inline]
     pub fn new() -> Self {
         Self::new_depth(0)
     }
 
     // For elegance, this would be recursive (and there wouldn't be a depth field on `Branch`),
     // but I'm worried about the performance of that.
+    #[inline]
     fn depth(&self) -> u8 {
         match self.root {
             Node::Branch { ref depth, .. } => *depth,
@@ -141,13 +146,13 @@ impl<T: Clone + Debug> PVec<T> {
         }
     }
 
-    pub fn push(self, element: T) -> Self {
+    #[inline]
+    pub fn push(mut self, element: T) -> Self {
         if self.len < BRANCH_FACTOR {
-            let mut new = self.clone();
-            match new.root {
+            match self.root {
                 Node::Leaf { ref mut elements } => {
-                    elements[new.len] = Some(element);
-                    new.len += 1;
+                    elements[self.len] = Some(element);
+                    self.len += 1;
                 }
                 Node::Branch {
                     ref mut children,
@@ -157,9 +162,12 @@ impl<T: Clone + Debug> PVec<T> {
                     let old = mem::replace(&mut children[i], None);
                     match old {
                         Some(child_ref) => {
-                            let child = (*child_ref).clone().push(element);
+                            let child = match Arc::try_unwrap(child_ref) {
+                                Ok(child) => child,
+                                Err(child_ref) => (*child_ref).clone(),
+                            }.push(element);
                             if child.len == BRANCH_FACTOR {
-                                new.len += 1;
+                                self.len += 1;
                             }
                             mem::replace(&mut children[i], Some(Arc::new(child)));
                         }
@@ -170,7 +178,7 @@ impl<T: Clone + Debug> PVec<T> {
                     }
                 }
             }
-            new
+            self
         } else {
             let mut children = empty_arr!();
             let depth = self.depth();
@@ -185,6 +193,7 @@ impl<T: Clone + Debug> PVec<T> {
         }
     }
 
+    #[inline]
     pub fn get(&self, index: usize) -> Option<&T> {
         let factor = BRANCH_EXPONENT * self.depth() as usize;
         let mask = BRANCH_FACTOR - 1;
