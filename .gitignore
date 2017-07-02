@@ -11,3 +11,7 @@ Cargo.lock
 /target/
 **/*.rs.bk
 Cargo.lock
+
+# perf results
+flame.svg
+perf.data*

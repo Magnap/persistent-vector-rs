@@ -16,3 +16,7 @@ quickcheck_macros = "0.4.2"
 [features]
 default = []
 narrow_branching = []
+
+#[profile.release]
+#debug = true
+#lto = false
