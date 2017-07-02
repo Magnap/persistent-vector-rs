@@ -57,6 +57,7 @@ fn vec_equivalence(actions: Vec<Action<u32>>) -> TestResult {
             }
         }
     }
+    println!("Test complete\n");
     if v_res != pv_res {
         println!("{:?}", actions);
         println!("{:?}", v);

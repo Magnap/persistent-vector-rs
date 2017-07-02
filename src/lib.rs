@@ -4,24 +4,26 @@ mod tests {
 
     #[test]
     fn push_get() {
+        let n = BRANCH_FACTOR.pow(2) + 1;
         let mut v = PVec::new();
-        for i in 0..(BRANCH_FACTOR.pow(2) + 1) {
+        for i in 0..n {
             v = v.push(i);
         }
         println!("{:#?}", v);
-        for i in 0..(BRANCH_FACTOR.pow(2) + 1) {
+        for i in 0..n {
             println!("{}:", i);
             assert_eq!(v.get(i), Some(&i));
         }
-        assert_eq!(v.get(BRANCH_FACTOR.pow(2) + 1), None);
+        assert_eq!(v.get(n), None);
     }
 
     #[test]
     fn false_get() {
         let v = PVec::new().push(0);
         for n in 0..BRANCH_FACTOR {
-            println!("n: {}", n);
-            assert_eq!(v.get((n + 1) * BRANCH_FACTOR), None);
+            let i = (n + 1) * BRANCH_FACTOR;
+            println!("n: {}, i: {}", n, i);
+            assert_eq!(v.get(i), None);
         }
     }
 }
