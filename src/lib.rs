@@ -5,15 +5,15 @@ mod tests {
     #[test]
     fn push_get() {
         let mut v = PVec::new();
-        for i in 0..(BRANCH_FACTOR * 4 + 1) {
+        for i in 0..(BRANCH_FACTOR.pow(2) + 1) {
             v = v.push(i);
         }
         println!("{:#?}", v);
-        for i in 0..(BRANCH_FACTOR * 4 + 1) {
+        for i in 0..(BRANCH_FACTOR.pow(2) + 1) {
             println!("{}:", i);
             assert_eq!(v.get(i), Some(&i));
         }
-        assert_eq!(v.get(BRANCH_FACTOR * 4 + 1), None);
+        assert_eq!(v.get(BRANCH_FACTOR.pow(2) + 1), None);
     }
 }
 
