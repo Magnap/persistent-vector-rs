@@ -11,22 +11,24 @@ use quickcheck::{Arbitrary, Gen, TestResult};
 enum Action<T> {
     Push(T),
     Get(u8),
+    Len,
 }
 
 impl<T: Arbitrary> Arbitrary for Action<T> {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let x: u8 = g.gen();
-        let x = x % 2;
+        let x = x % 3;
         match x {
             0 => Action::Push(Arbitrary::arbitrary(g)),
             1 => Action::Get(g.gen()),
+            2 => Action::Len,
             _ => panic!("math is broken"),
         }
     }
 }
 
 #[quickcheck]
-fn vec_equivalence(actions: Vec<Action<u32>>) -> TestResult {
+fn vec_equivalence(actions: Vec<Action<usize>>) -> TestResult {
     let mut v = Vec::new();
     let mut v_res = Vec::new();
     for a in &actions {
@@ -40,6 +42,7 @@ fn vec_equivalence(actions: Vec<Action<u32>>) -> TestResult {
                 };
                 v_res.push(x)
             }
+            Action::Len => v_res.push(Some(v.len())),
         }
     }
     let mut pv = PVec::new();
@@ -55,6 +58,7 @@ fn vec_equivalence(actions: Vec<Action<u32>>) -> TestResult {
                 };
                 pv_res.push(x)
             }
+            Action::Len => pv_res.push(Some(pv.len())),
         }
     }
     println!("Test complete\n");

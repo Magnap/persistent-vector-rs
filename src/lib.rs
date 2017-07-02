@@ -8,6 +8,7 @@ mod tests {
         let mut v = PVec::new();
         for i in 0..n {
             v = v.push(i);
+            assert_eq!(v.len(), i + 1);
         }
         println!("{:#?}", v);
         for i in 0..n {
@@ -208,6 +209,27 @@ impl<T: Clone + Debug> PVec<T> {
                 }
                 Node::Leaf { ref elements } => elements[i].as_ref(),
             }
+        }
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        let full = BRANCH_FACTOR.pow(self.depth() as u32) * self.len;
+        if self.len < BRANCH_FACTOR {
+            let rest = match self.root {
+                Node::Leaf { .. } => 0,
+                Node::Branch { ref children, .. } => {
+                    children[self.len].as_ref().map_or(0, |c| c.len())
+                }
+            };
+            full + rest
+        } else {
+            full
         }
     }
 }
